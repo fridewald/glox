@@ -2,7 +2,6 @@ import argv
 import gleam/io
 import gleam/list
 import gleave
-import glox/exit
 import glox/scanner
 import input
 import simplifile
@@ -10,8 +9,7 @@ import simplifile
 const usage = "Usage: glox [script]"
 
 pub fn main() -> Nil {
-  let argv_load = argv.load()
-  let args = argv_load.arguments
+  let args = argv.load().arguments
   case args {
     [] -> run_prompt()
     [script] -> run_file(script)
@@ -49,7 +47,7 @@ fn run(file_content_string: String) -> Nil {
   case tokens {
     Ok(tokens) -> {
       list.map(tokens, fn(token) { echo token })
-      todo
+      Nil
     }
     Error(error) -> {
       io.println(error)
