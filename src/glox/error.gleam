@@ -1,6 +1,7 @@
 import gleam/int
 import gleam/io
 
+
 pub fn error(line: Int, message: String) {
   report(line, "", message)
 }

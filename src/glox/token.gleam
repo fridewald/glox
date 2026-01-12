@@ -1,17 +1,53 @@
+import gleam/float
 import gleam/io
+import gleam/string
+
+pub type Error {
+  UnsupportedCharacter(char: String)
+  ParseError
+  NotSingleCharacter
+  Empty
+}
+
+pub fn pretty_print_error(error: Error) {
+  let print_string = case error {
+    UnsupportedCharacter(char:) -> "UnsupportedCharacter(" <> char <> ")"
+    ParseError -> "ParseError"
+    NotSingleCharacter -> "NotSingleCharacter"
+    Empty -> "Empty"
+  }
+  io.println_error(print_string)
+}
 
 pub type Token {
-  Token(token_type: TokenType, lexeme: String, literal: String, line: Int)
+  Token(token_type: TokenType, lexeme: String, line: Int)
 }
 
 pub fn print_token(token: Token) {
   io.println(
-    token_type_to_string(token.token_type)
-    <> " "
-    <> token.lexeme
-    <> " "
-    <> token.literal,
+    token_type_to_name_of_type(token.token_type) <> " " <> token.lexeme,
   )
+}
+
+pub fn parse_single_character_token_from_string(
+  input: String,
+) -> Result(TokenType, Error) {
+  case string.pop_grapheme(input) {
+    Ok(#("(", "")) -> Ok(LeftParen)
+    Ok(#(")", "")) -> Ok(RightParen)
+    Ok(#("{", "")) -> Ok(LeftBrace)
+    Ok(#("}", "")) -> Ok(RightBrace)
+    Ok(#(",", "")) -> Ok(Comma)
+    Ok(#(".", "")) -> Ok(Dot)
+    Ok(#("-", "")) -> Ok(Minus)
+    Ok(#("+", "")) -> Ok(Plus)
+    Ok(#(";", "")) -> Ok(Semicolon)
+    Ok(#("*", "")) -> Ok(Star)
+    Ok(#("/", "")) -> Ok(Slash)
+    Ok(#(char, "")) -> Error(UnsupportedCharacter(char))
+    Error(_) -> Error(ParseError)
+    Ok(#(_, _)) -> Error(NotSingleCharacter)
+  }
 }
 
 pub type TokenType {
@@ -37,9 +73,9 @@ pub type TokenType {
   Less
   LessEqual
   // Literals.
-  Identifier
-  String
-  Number
+  Identifier(String)
+  String(String)
+  Number(Float)
   // Keywords.
   And
   Class
@@ -60,7 +96,7 @@ pub type TokenType {
   Eof
 }
 
-pub fn token_type_to_string(token_type: TokenType) -> String {
+pub fn token_type_to_name_of_type(token_type: TokenType) -> String {
   case token_type {
     LeftParen -> "LeftParen"
     RightParen -> "RightParen"
@@ -81,9 +117,9 @@ pub fn token_type_to_string(token_type: TokenType) -> String {
     GreaterEqual -> "GreaterEqual"
     Less -> "Less"
     LessEqual -> "LessEqual"
-    Identifier -> "Identifier"
-    String -> "String"
-    Number -> "Number"
+    Identifier(val) -> "Identifier(" <> val <> ")"
+    String(val) -> "String(" <> val <> ")"
+    Number(val) -> "Number(" <> val |> float.to_string <> ")"
     And -> "And"
     Class -> "Class"
     Else -> "Else"

@@ -3,6 +3,7 @@ import gleam/io
 import gleam/list
 import gleave
 import glox/scanner
+import glox/token
 import input
 import simplifile
 
@@ -45,13 +46,9 @@ fn run(file_content_string: String) -> Nil {
   io.println("Running code...")
   let tokens = scanner.scan_tokens(file_content_string)
   case tokens {
-    Ok(tokens) -> {
-      list.map(tokens, fn(token) { echo token })
-      Nil
-    }
-    Error(error) -> {
-      io.println(error)
-    }
+    Ok(tokens) -> list.each(tokens, fn(token) { echo token })
+    Error(error) ->
+      error
+      |> list.each(token.pretty_print_error)
   }
-  Nil
 }
