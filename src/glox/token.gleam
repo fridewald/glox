@@ -1,7 +1,6 @@
 import gleam/float
 import gleam/int
 import gleam/io
-import gleam/string
 
 //############################ Token Errors ####################################
 pub type TokenError {
@@ -46,27 +45,6 @@ pub fn print_token(token: Token) {
   io.println(
     token_type_to_name_of_type(token.token_type) <> " " <> token.lexeme,
   )
-}
-
-pub fn parse_single_character_token_from_string(
-  input: String,
-) -> Result(TokenType, ErrorType) {
-  case string.pop_grapheme(input) {
-    Ok(#("(", "")) -> Ok(LeftParen)
-    Ok(#(")", "")) -> Ok(RightParen)
-    Ok(#("{", "")) -> Ok(LeftBrace)
-    Ok(#("}", "")) -> Ok(RightBrace)
-    Ok(#(",", "")) -> Ok(Comma)
-    Ok(#(".", "")) -> Ok(Dot)
-    Ok(#("-", "")) -> Ok(Minus)
-    Ok(#("+", "")) -> Ok(Plus)
-    Ok(#(";", "")) -> Ok(Semicolon)
-    Ok(#("*", "")) -> Ok(Star)
-    Ok(#("/", "")) -> Ok(Slash)
-    Ok(#(char, "")) -> Error(UnsupportedCharacter(char))
-    Error(_) -> Error(ParseError)
-    Ok(#(_, _)) -> Error(NotSingleCharacter)
-  }
 }
 
 pub type TokenType {

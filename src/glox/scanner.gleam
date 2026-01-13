@@ -1,10 +1,6 @@
 import gleam/list
-import gleam/result
 import gleam/string
-import glox/token.{
-  type Token, type TokenError, EmptyString, NotSingleCharacter, ParseError,
-  TokenError, UnsupportedCharacter,
-}
+import glox/token.{type Token, type TokenError, EmptyString, TokenError}
 
 pub type Source {
   Source(input: String, line: Int)
@@ -13,9 +9,6 @@ pub type Source {
 type Match {
   Match(token: Token, next_source: Source)
   NoMatch
-}
-
-type MatchError {
   MatchError(error: TokenError, next_source: Source)
 }
 
@@ -76,49 +69,41 @@ fn match(source: Source) -> #(Result(Token, TokenError), Source) {
 
 /// try to match
 fn match_guard(
-  test_match match_result: Result(Match, MatchError),
+  test_match match_result: Match,
   continue fun: fn() -> #(Result(Token, TokenError), Source),
 ) -> #(Result(Token, TokenError), Source) {
   case match_result {
-    Ok(Match(token:, next_source:)) -> #(Ok(token), next_source)
-    Ok(NoMatch) -> fun()
-    Error(MatchError(error:, next_source:)) -> #(Error(error), next_source)
+    Match(token:, next_source:) -> #(Ok(token), next_source)
+    NoMatch -> fun()
+    MatchError(error:, next_source:) -> #(Error(error), next_source)
   }
 }
 
-fn match_eof(source: Source) -> Result(Match, MatchError) {
+fn match_eof(source: Source) -> Match {
   case source.input == "" {
-    True -> Ok(Match(token.Token(token.Eof, "", source.line), source))
-    False -> Ok(NoMatch)
+    True -> Match(token.Token(token.Eof, "", source.line), source)
+    False -> NoMatch
   }
 }
 
-fn match_single_character_token(source: Source) -> Result(Match, MatchError) {
-  use #(char, rest) <- result.try(
-    string.pop_grapheme(source.input)
-    |> result.replace_error(MatchError(
-      TokenError(EmptyString, source.line),
-      source,
-    )),
-  )
-  case token.parse_single_character_token_from_string(char) {
-    Ok(token) ->
-      Ok(Match(
-        token.Token(token_type: token, lexeme: char, line: source.line),
-        Source(rest, source.line),
-      ))
-    Error(ParseError) ->
-      Error(MatchError(
-        TokenError(ParseError, source.line),
-        Source(..source, input: rest),
-      ))
-    Error(UnsupportedCharacter(_))
-    | Error(NotSingleCharacter)
-    | Error(EmptyString) -> Ok(NoMatch)
+fn match_single_character_token(source: Source) -> Match {
+  case source.input {
+    "(" <> rest -> ok_match(token.LeftParen, source, rest)
+    ")" <> rest -> ok_match(token.RightParen, source, rest)
+    "{" <> rest -> ok_match(token.LeftBrace, source, rest)
+    "}" <> rest -> ok_match(token.RightBrace, source, rest)
+    "," <> rest -> ok_match(token.Comma, source, rest)
+    "." <> rest -> ok_match(token.Dot, source, rest)
+    "-" <> rest -> ok_match(token.Minus, source, rest)
+    "+" <> rest -> ok_match(token.Plus, source, rest)
+    ";" <> rest -> ok_match(token.Semicolon, source, rest)
+    "*" <> rest -> ok_match(token.Star, source, rest)
+    "/" <> rest -> ok_match(token.Slash, source, rest)
+    _unsupported -> no_match(source)
   }
 }
 
-fn match_operator(source: Source) -> Result(Match, MatchError) {
+fn match_operator(source: Source) -> Match {
   case source.input {
     "!=" <> rest -> ok_match(token.BangEqual, source, rest)
     "!" <> rest -> ok_match(token.Bang, source, rest)
@@ -132,24 +117,20 @@ fn match_operator(source: Source) -> Result(Match, MatchError) {
   }
 }
 
-fn no_match(source: Source) -> Result(Match, MatchError) {
+fn no_match(source: Source) -> Match {
   case string.pop_grapheme(source.input) {
-    Ok(_) -> Ok(NoMatch)
-    Error(_) -> Error(MatchError(TokenError(EmptyString, source.line), source))
+    Ok(_) -> NoMatch
+    Error(_) -> MatchError(TokenError(EmptyString, source.line), source)
   }
 }
 
-fn ok_match(
-  token_type: token.TokenType,
-  source: Source,
-  rest: String,
-) -> Result(Match, MatchError) {
-  Ok(Match(
+fn ok_match(token_type: token.TokenType, source: Source, rest: String) -> Match {
+  Match(
     token.Token(
       token_type: token_type,
       lexeme: token.token_type_to_lexeme(token_type),
       line: source.line,
     ),
     Source(rest, source.line),
-  ))
+  )
 }
