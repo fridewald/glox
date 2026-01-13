@@ -47,9 +47,9 @@ pub fn operator_keyword_test() {
 }
 
 pub fn ignore_whitespaces_test() {
-  let operators = "==\n/\t +\n"
+  let white_spaces = "==\n/\t +\n"
 
-  let tokens = scanner.scan_tokens(operators)
+  let tokens = scanner.scan_tokens(white_spaces)
 
   assert tokens
     == Ok([
@@ -61,14 +61,38 @@ pub fn ignore_whitespaces_test() {
 }
 
 pub fn ignore_comment_test() {
-  let operators = "// This is a comment\n()"
+  let with_comment = "// This is a comment\n()"
 
-  let tokens = scanner.scan_tokens(operators)
+  let tokens = scanner.scan_tokens(with_comment)
 
   assert tokens
     == Ok([
       Token(token.LeftParen, "(", 2),
       Token(token.RightParen, ")", 2),
       Token(token.Eof, "", 2),
+    ])
+}
+
+pub fn string_test() {
+  let with_string = "\"Hallo Lucy!\"\"*\n*\n*\""
+
+  let tokens = scanner.scan_tokens(with_string)
+
+  assert tokens
+    == Ok([
+      Token(token.String("Hallo Lucy!"), "\"Hallo Lucy!\"", 1),
+      Token(token.String("*\n*\n*"), "\"*\n*\n*\"", 1),
+      Token(token.Eof, "", 3),
+    ])
+}
+
+pub fn unclosed_string_test() {
+  let with_string = "\"Hallo Tilda\n\n"
+
+  let tokens = scanner.scan_tokens(with_string)
+
+  assert tokens
+    == Error([
+      token.TokenError(token.UnterminatedString, 1),
     ])
 }

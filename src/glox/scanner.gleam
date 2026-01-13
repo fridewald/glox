@@ -64,7 +64,8 @@ fn do_scan_tokens(
 
 fn match() -> fn(Source) -> #(Result(Token, TokenError), Source) {
   // cache splitters
-  let line_ends = splitter.new(["\n"])
+  let line_ends_splitter = splitter.new(["\n"])
+  let quotes_splitter = splitter.new(["\""])
 
   // match function
   fn(source: Source) -> #(Result(Token, TokenError), Source) {
@@ -72,9 +73,14 @@ fn match() -> fn(Source) -> #(Result(Token, TokenError), Source) {
     use source <- match_guard(test_match: match_single_character_token(source))
     use source <- match_guard(test_match: match_operator(source))
     use source <- match_guard(test_match: match_whitespaces(source))
-    use source <- match_guard(test_match: match_slash_or_comment(source, line_ends))
-    // // use <- match_guard(test_match: ignore_white_spaces(source))
-    // use <- match_guard(test_match: match_string_literal(source))
+    use source <- match_guard(test_match: match_slash_or_comment(
+      source,
+      line_ends_splitter,
+    ))
+    use source <- match_guard(test_match: match_string_literal(
+      source,
+      quotes_splitter,
+    ))
     // use <- match_guard(test_match: match_number_literal(source))
     // use <- match_guard(test_match: match_identifiers(source))
     // use <- match_guard(test_match: match_reserved_word(source))
@@ -155,6 +161,35 @@ fn match_slash_or_comment(source: Source, line_ends: Splitter) -> Match {
     "//" <> _rest -> ignore_till_eol(source, line_ends)
     "/" <> rest -> ok_match(token.Slash, source, rest)
     _unsupported -> continue(source)
+  }
+}
+
+fn match_string_literal(source: Source, quotes_splitter: Splitter) -> Match {
+  case source.input {
+    "\"" <> rest -> {
+      let #(value, quote, rest) = splitter.split(quotes_splitter, rest)
+      let new_lines =
+        string.to_graphemes(value)
+        |> list.count(fn(grapheme) { grapheme == "\n" })
+      let token_type = token.String(value)
+      case quote {
+        "\"" ->
+          Match(
+            token.Token(
+              token_type:,
+              lexeme: token.token_type_to_lexeme(token_type),
+              line: source.line,
+            ),
+            Source(input: rest, line: source.line + new_lines),
+          )
+        _ ->
+          MatchError(
+            TokenError(token.UnterminatedString, source.line),
+            Source(..source, input: rest),
+          )
+      }
+    }
+    _un -> continue(source)
   }
 }
 

@@ -12,6 +12,7 @@ pub type ErrorType {
   ParseError
   NotSingleCharacter
   EmptyString
+  UnterminatedString
 }
 
 pub fn pretty_print_error(error: TokenError) {
@@ -26,6 +27,7 @@ pub fn error_type_to_string(error: ErrorType) {
     ParseError -> "ParseError"
     NotSingleCharacter -> "NotSingleCharacter"
     EmptyString -> "EmptyString"
+    UnterminatedString -> "UnterminatedString"
   }
 }
 
