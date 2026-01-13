@@ -2,8 +2,8 @@ import gleam/list
 import gleam/result
 import gleam/string
 import glox/token.{
-  type Token, type TokenError, NotSingleCharacter, ParseError, TokenError,
-  UnsupportedCharacter,
+  type Token, type TokenError, EmptyString, NotSingleCharacter, ParseError,
+  TokenError, UnsupportedCharacter,
 }
 
 pub type Source {
@@ -48,7 +48,7 @@ fn do_scan_tokens(
   case token_result {
     // recursion end
     Ok(token) if token.token_type == token.Eof -> list.reverse(next_results)
-    Error(TokenError(token.EmptyString, _)) -> list.reverse(next_results)
+    Error(TokenError(EmptyString, _)) -> list.reverse(next_results)
     _ -> {
       do_scan_tokens(next_source, next_results)
     }
@@ -58,12 +58,19 @@ fn do_scan_tokens(
 fn match(source: Source) -> #(Result(Token, TokenError), Source) {
   use <- match_guard(test_match: match_eof(source))
   use <- match_guard(test_match: match_single_character_token(source))
+  use <- match_guard(test_match: match_operator(source))
+  // use <- match_guard(test_match: match_comment(source))
+  // // use <- match_guard(test_match: ignore_white_spaces(source))
+  // use <- match_guard(test_match: match_string_literal(source))
+  // use <- match_guard(test_match: match_number_literal(source))
+  // use <- match_guard(test_match: match_identifiers(source))
+  // use <- match_guard(test_match: match_reserved_word(source))
   case string.pop_grapheme(source.input) {
     Ok(#(char, rest)) -> #(
       Error(TokenError(token.UnsupportedCharacter(char), source.line)),
       Source(input: rest, line: source.line),
     )
-    Error(_) -> #(Error(TokenError(token.EmptyString, source.line)), source)
+    Error(_) -> #(Error(TokenError(EmptyString, source.line)), source)
   }
 }
 
@@ -90,7 +97,7 @@ fn match_single_character_token(source: Source) -> Result(Match, MatchError) {
   use #(char, rest) <- result.try(
     string.pop_grapheme(source.input)
     |> result.replace_error(MatchError(
-      TokenError(ParseError, source.line),
+      TokenError(EmptyString, source.line),
       source,
     )),
   )
@@ -107,6 +114,42 @@ fn match_single_character_token(source: Source) -> Result(Match, MatchError) {
       ))
     Error(UnsupportedCharacter(_))
     | Error(NotSingleCharacter)
-    | Error(token.EmptyString) -> Ok(NoMatch)
+    | Error(EmptyString) -> Ok(NoMatch)
   }
+}
+
+fn match_operator(source: Source) -> Result(Match, MatchError) {
+  case source.input {
+    "!=" <> rest -> ok_match(token.BangEqual, source, rest)
+    "!" <> rest -> ok_match(token.Bang, source, rest)
+    "<=" <> rest -> ok_match(token.LessEqual, source, rest)
+    "<" <> rest -> ok_match(token.Less, source, rest)
+    ">=" <> rest -> ok_match(token.GreaterEqual, source, rest)
+    ">" <> rest -> ok_match(token.Greater, source, rest)
+    "==" <> rest -> ok_match(token.EqualEqual, source, rest)
+    "=" <> rest -> ok_match(token.Equal, source, rest)
+    _unsupported -> no_match(source)
+  }
+}
+
+fn no_match(source: Source) -> Result(Match, MatchError) {
+  case string.pop_grapheme(source.input) {
+    Ok(_) -> Ok(NoMatch)
+    Error(_) -> Error(MatchError(TokenError(EmptyString, source.line), source))
+  }
+}
+
+fn ok_match(
+  token_type: token.TokenType,
+  source: Source,
+  rest: String,
+) -> Result(Match, MatchError) {
+  Ok(Match(
+    token.Token(
+      token_type: token_type,
+      lexeme: token.token_type_to_lexeme(token_type),
+      line: source.line,
+    ),
+    Source(rest, source.line),
+  ))
 }

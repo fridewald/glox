@@ -31,3 +31,17 @@ pub fn unsupported_keyword_test() {
 
   assert tokens == Error([token.TokenError(token.UnsupportedCharacter("["), 1)])
 }
+
+pub fn operator_keyword_test() {
+  let operators = "=.!="
+
+  let tokens = scanner.scan_tokens(operators)
+
+  assert tokens
+    == Ok([
+      Token(token.Equal, "=", 1),
+      Token(token.Dot, ".", 1),
+      Token(token.BangEqual, "!=", 1),
+      Token(token.Eof, "", 1),
+    ])
+}

@@ -84,7 +84,7 @@ pub type TokenType {
   Star
   // One or two character tokens.
   Bang
-  BangEquaL
+  BangEqual
   Equal
   EqualEqual
   Greater
@@ -129,7 +129,7 @@ pub fn token_type_to_name_of_type(token_type: TokenType) -> String {
     Slash -> "Slash"
     Star -> "Star"
     Bang -> "Bang"
-    BangEquaL -> "BangEquaL"
+    BangEqual -> "BangEquaL"
     Equal -> "Equal"
     EqualEqual -> "EqualEqual"
     Greater -> "Greater"
@@ -156,5 +156,49 @@ pub fn token_type_to_name_of_type(token_type: TokenType) -> String {
     Var -> "Var"
     While -> "While"
     Eof -> "Eof"
+  }
+}
+
+pub fn token_type_to_lexeme(token_type: TokenType) -> String {
+  case token_type {
+    LeftParen -> "("
+    RightParen -> ")"
+    LeftBrace -> "{"
+    RightBrace -> "}"
+    Comma -> ","
+    Dot -> "."
+    Minus -> "-"
+    Plus -> "+"
+    Semicolon -> ";"
+    Slash -> "/"
+    Star -> "*"
+    Bang -> "!"
+    BangEqual -> "!="
+    Equal -> "="
+    EqualEqual -> "=="
+    Greater -> ">"
+    GreaterEqual -> ">="
+    Less -> "<"
+    LessEqual -> "<="
+    Identifier(name) -> name
+    String(value) -> "\"" <> value <> "\""
+    Number(number) -> number |> float.to_string
+    And -> "and"
+    Class -> "class"
+    Else -> "else"
+    False -> "false"
+    Fun -> "fun"
+    For -> "for"
+    If -> "if"
+    Nil -> "nil"
+    Or -> "or"
+    Print -> "print"
+    Return -> "return"
+    Super -> "super"
+    This -> "this"
+    True -> "true"
+    Var -> "var"
+    While -> "while"
+    Eof -> ""
   }
 }
