@@ -45,3 +45,30 @@ pub fn operator_keyword_test() {
       Token(token.Eof, "", 1),
     ])
 }
+
+pub fn ignore_whitespaces_test() {
+  let operators = "==\n/\t +\n"
+
+  let tokens = scanner.scan_tokens(operators)
+
+  assert tokens
+    == Ok([
+      Token(token.EqualEqual, "==", 1),
+      Token(token.Slash, "/", 2),
+      Token(token.Plus, "+", 2),
+      Token(token.Eof, "", 3),
+    ])
+}
+
+pub fn ignore_comment_test() {
+  let operators = "// This is a comment\n()"
+
+  let tokens = scanner.scan_tokens(operators)
+
+  assert tokens
+    == Ok([
+      Token(token.LeftParen, "(", 2),
+      Token(token.RightParen, ")", 2),
+      Token(token.Eof, "", 2),
+    ])
+}

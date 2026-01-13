@@ -91,6 +91,8 @@ pub type TokenType {
   Var
   While
   Eof
+  // Ignore
+  Ignore
 }
 
 pub fn token_type_to_name_of_type(token_type: TokenType) -> String {
@@ -134,6 +136,7 @@ pub fn token_type_to_name_of_type(token_type: TokenType) -> String {
     Var -> "Var"
     While -> "While"
     Eof -> "Eof"
+    Ignore -> "Ignore"
   }
 }
 
@@ -178,5 +181,6 @@ pub fn token_type_to_lexeme(token_type: TokenType) -> String {
     Var -> "var"
     While -> "while"
     Eof -> ""
+    Ignore -> ""
   }
 }
