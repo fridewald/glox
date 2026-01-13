@@ -29,5 +29,5 @@ pub fn unsupported_keyword_test() {
 
   let tokens = scanner.scan_tokens(unsupported_keyword)
 
-  assert tokens == Error([token.UnsupportedCharacter("[")])
+  assert tokens == Error([token.TokenError(token.UnsupportedCharacter("["), 1)])
 }

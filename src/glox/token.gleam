@@ -1,23 +1,42 @@
 import gleam/float
+import gleam/int
 import gleam/io
 import gleam/string
 
-pub type Error {
+//############################ Token Errors ####################################
+pub type TokenError {
+  TokenError(error: ErrorType, line: Int)
+}
+
+pub type ErrorType {
   UnsupportedCharacter(char: String)
   ParseError
   NotSingleCharacter
-  Empty
+  EmptyString
 }
 
-pub fn pretty_print_error(error: Error) {
-  let print_string = case error {
+pub fn pretty_print_error(error: TokenError) {
+  let TokenError(error, line) = error
+  let print_string = error_type_to_string(error)
+  report(line, "", print_string)
+}
+
+pub fn error_type_to_string(error: ErrorType) {
+  case error {
     UnsupportedCharacter(char:) -> "UnsupportedCharacter(" <> char <> ")"
     ParseError -> "ParseError"
     NotSingleCharacter -> "NotSingleCharacter"
-    Empty -> "Empty"
+    EmptyString -> "EmptyString"
   }
-  io.println_error(print_string)
 }
+
+fn report(line: Int, where: String, message: String) {
+  io.println_error(
+    "[line " <> int.to_string(line) <> "] " <> where <> ": " <> message,
+  )
+}
+
+//############################ Token ###########################################
 
 pub type Token {
   Token(token_type: TokenType, lexeme: String, line: Int)
@@ -31,7 +50,7 @@ pub fn print_token(token: Token) {
 
 pub fn parse_single_character_token_from_string(
   input: String,
-) -> Result(TokenType, Error) {
+) -> Result(TokenType, ErrorType) {
   case string.pop_grapheme(input) {
     Ok(#("(", "")) -> Ok(LeftParen)
     Ok(#(")", "")) -> Ok(RightParen)
