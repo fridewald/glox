@@ -122,3 +122,56 @@ pub fn unsupported_number_test() {
       token.TokenError(token.ParseError, 1),
     ])
 }
+
+pub fn identifier_test() {
+  let identifier_lex =
+    "and class else false fun for if nil or print return super this true var while"
+  let tokens = scanner.scan_tokens(identifier_lex)
+
+  assert tokens
+    == Ok([
+      Token(token.And, "and", 1),
+      Token(token.Class, "class", 1),
+      Token(token.Else, "else", 1),
+      Token(token.False, "false", 1),
+      Token(token.Fun, "fun", 1),
+      Token(token.For, "for", 1),
+      Token(token.If, "if", 1),
+      Token(token.Nil, "nil", 1),
+      Token(token.Or, "or", 1),
+      Token(token.Print, "print", 1),
+      Token(token.Return, "return", 1),
+      Token(token.Super, "super", 1),
+      Token(token.This, "this", 1),
+      Token(token.True, "true", 1),
+      Token(token.Var, "var", 1),
+      Token(token.While, "while", 1),
+      Token(token.Eof, "", 1),
+    ])
+}
+
+pub fn reserved_keyword_test() {
+  let reserved_keyword_lex = "var Test = \"10\""
+
+  let tokens = scanner.scan_tokens(reserved_keyword_lex)
+
+  assert tokens
+    == Ok([
+      Token(token.Var, "var", 1),
+      Token(token.Identifier("Test"), "Test", 1),
+      Token(token.Equal, "=", 1),
+      Token(token.String("10"), "\"10\"", 1),
+      Token(token.Eof, "", 1),
+    ])
+}
+
+pub fn unsupported_identifier_todo() {
+  let unsupported_identifier = "var 1ten"
+
+  let tokens = scanner.scan_tokens(unsupported_identifier)
+
+  assert tokens
+    == Error([
+      token.TokenError(token.ParseError, 1),
+    ])
+}

@@ -86,7 +86,7 @@ fn match() -> fn(Source) -> #(Result(Token, TokenError), Source) {
       quotes_splitter,
     ))
     use source <- match_guard(test_match: match_number_literal(source))
-    // use <- match_guard(test_match: match_identifiers(source))
+    use source <- match_guard(test_match: match_identifiers(source))
     // use <- match_guard(test_match: match_reserved_word(source))
     case string.pop_grapheme(source.input) {
       Ok(#(char, rest)) -> #(
@@ -201,7 +201,7 @@ fn match_number_literal(source: Source) -> Match {
   {
     use #(char, _rest) <- result.map(string.pop_grapheme(source.input))
     use <- bool.guard(!is_number(char), Continue(source))
-    case consume_number(source.input, [], False) {
+    case consume_number(source.input) {
       #(Ok(res), input) ->
         Match(
           token.Token(token.Number(res.0), res.1, source.line),
@@ -217,37 +217,52 @@ fn match_number_literal(source: Source) -> Match {
   |> result.unwrap(MatchError(TokenError(EmptyString, source.line), source))
 }
 
-fn consume_number(
+fn pop_until(
+  input: String,
+  break: fn(String) -> Bool,
+  parse: fn(String) -> Result(b, Nil),
+) -> #(Result(#(b, String), token.ErrorType), String) {
+  do_pop_until(input, [], break, parse)
+}
+
+fn do_pop_until(
   input: String,
   lookahead: List(String),
-  has_dot: Bool,
-) -> #(Result(#(Float, String), token.ErrorType), String) {
+  break: fn(String) -> Bool,
+  parse: fn(String) -> Result(b, Nil),
+) -> #(Result(#(b, String), token.ErrorType), String) {
   case string.pop_grapheme(input) {
     Ok(#(char, rest)) -> {
       // base case
-      use <- bool.lazy_guard(number_break(char), fn() {
-        number_base_case(lookahead, has_dot, input)
+      use <- bool.lazy_guard(break(char), fn() {
+        consume_base_case(lookahead, input, parse)
       })
-      consume_number(rest, [char, ..lookahead], has_dot || char == ".")
+      do_pop_until(rest, [char, ..lookahead], break, parse)
     }
-    Error(_) -> number_base_case(lookahead, has_dot, input)
+    Error(_) -> consume_base_case(lookahead, input, parse)
   }
 }
 
-fn number_base_case(lookahead, has_dot, input) {
+fn consume_base_case(
+  lookahead: List(String),
+  input: a,
+  parse: fn(String) -> Result(b, Nil),
+) -> #(Result(#(b, String), token.ErrorType), a) {
   let string_representation =
     lookahead
     |> list.reverse()
     |> string.join("")
-  let string_with_dot_representation = case has_dot {
-    True -> string_representation
-    False -> string_representation <> ".0"
-  }
-  string_with_dot_representation
-  |> float.parse()
+
+  parse(string_representation)
   |> result.map(pair.new(_, string_representation))
   |> result.replace_error(token.ParseError)
   |> pair.new(input)
+}
+
+fn consume_number(
+  input: String,
+) -> #(Result(#(Float, String), token.ErrorType), String) {
+  pop_until(input, number_break, parse_float)
 }
 
 fn number_break(char: String) -> Bool {
@@ -265,6 +280,73 @@ fn is_number(to_check) {
   || "7" == to_check
   || "8" == to_check
   || "9" == to_check
+}
+
+fn parse_float(string_representation: String) -> Result(Float, Nil) {
+  let string_with_dot_representation = case
+    string.contains(string_representation, ".")
+  {
+    True -> string_representation
+    False -> string_representation <> ".0"
+  }
+  string_with_dot_representation
+  |> float.parse()
+}
+
+fn match_identifiers(source: Source) -> Match {
+  {
+    use #(char, _rest) <- result.map(string.pop_grapheme(source.input))
+    use <- bool.guard(!is_alpha(char), Continue(source))
+    case pop_until(source.input, identifier_break, parse_identifier) {
+      #(Ok(res), input) ->
+        Match(token.Token(res.0, res.1, source.line), Source(..source, input:))
+      #(Error(_), input) ->
+        MatchError(
+          TokenError(token.ParseError, source.line),
+          Source(..source, input:),
+        )
+    }
+  }
+  |> result.unwrap(MatchError(TokenError(EmptyString, source.line), source))
+}
+
+fn parse_identifier(string: String) -> Result(token.TokenType, Nil) {
+  case string {
+    "and" -> token.And
+    "class" -> token.Class
+    "else" -> token.Else
+    "false" -> token.False
+    "fun" -> token.Fun
+    "for" -> token.For
+    "if" -> token.If
+    "nil" -> token.Nil
+    "or" -> token.Or
+    "print" -> token.Print
+    "return" -> token.Return
+    "super" -> token.Super
+    "this" -> token.This
+    "true" -> token.True
+    "var" -> token.Var
+    "while" -> token.While
+    _ -> token.Identifier(string)
+  }
+  |> Ok
+}
+
+fn identifier_break(char: String) -> Bool {
+  !is_alpha(char) && !is_number(char)
+}
+
+fn is_alpha(to_check) {
+  case string.to_utf_codepoints(to_check) {
+    [codepoint] -> {
+      let codepoint_int = codepoint |> string.utf_codepoint_to_int
+      { codepoint_int >= 97 && codepoint_int <= 122 }
+      || { codepoint_int >= 65 && codepoint_int <= 90 }
+      || to_check == "_"
+    }
+    _ -> False
+  }
 }
 
 fn continue(source: Source) -> Match {
