@@ -96,3 +96,29 @@ pub fn unclosed_string_test() {
       token.TokenError(token.UnterminatedString, 1),
     ])
 }
+
+pub fn number_test() {
+  let number_lex = "123\n456.7809"
+
+  let tokens = scanner.scan_tokens(number_lex)
+
+  assert tokens
+    == Ok([
+      Token(token.Number(123.0), "123", 1),
+      Token(token.Number(456.7809), "456.7809", 2),
+      Token(token.Eof, "", 2),
+    ])
+}
+
+pub fn unsupported_number_test() {
+  let number_lex = "123.\n"
+  // TODO: don't allow leading dot
+  // let number_lex = "123.\n.78"
+
+  let tokens = scanner.scan_tokens(number_lex)
+
+  assert tokens
+    == Error([
+      token.TokenError(token.ParseError, 1),
+    ])
+}

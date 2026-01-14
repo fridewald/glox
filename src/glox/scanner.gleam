@@ -1,4 +1,8 @@
+import gleam/bool
+import gleam/float
 import gleam/list
+import gleam/pair
+import gleam/result
 import gleam/string
 import glox/token.{type Token, type TokenError, EmptyString, TokenError}
 import splitter.{type Splitter}
@@ -81,7 +85,7 @@ fn match() -> fn(Source) -> #(Result(Token, TokenError), Source) {
       source,
       quotes_splitter,
     ))
-    // use <- match_guard(test_match: match_number_literal(source))
+    use source <- match_guard(test_match: match_number_literal(source))
     // use <- match_guard(test_match: match_identifiers(source))
     // use <- match_guard(test_match: match_reserved_word(source))
     case string.pop_grapheme(source.input) {
@@ -191,6 +195,76 @@ fn match_string_literal(source: Source, quotes_splitter: Splitter) -> Match {
     }
     _un -> continue(source)
   }
+}
+
+fn match_number_literal(source: Source) -> Match {
+  {
+    use #(char, _rest) <- result.map(string.pop_grapheme(source.input))
+    use <- bool.guard(!is_number(char), Continue(source))
+    case consume_number(source.input, [], False) {
+      #(Ok(res), input) ->
+        Match(
+          token.Token(token.Number(res.0), res.1, source.line),
+          Source(..source, input:),
+        )
+      #(Error(_), input) ->
+        MatchError(
+          TokenError(token.ParseError, source.line),
+          Source(..source, input:),
+        )
+    }
+  }
+  |> result.unwrap(MatchError(TokenError(EmptyString, source.line), source))
+}
+
+fn consume_number(
+  input: String,
+  lookahead: List(String),
+  has_dot: Bool,
+) -> #(Result(#(Float, String), token.ErrorType), String) {
+  case string.pop_grapheme(input) {
+    Ok(#(char, rest)) -> {
+      // base case
+      use <- bool.lazy_guard(number_break(char), fn() {
+        number_base_case(lookahead, has_dot, input)
+      })
+      consume_number(rest, [char, ..lookahead], has_dot || char == ".")
+    }
+    Error(_) -> number_base_case(lookahead, has_dot, input)
+  }
+}
+
+fn number_base_case(lookahead, has_dot, input) {
+  let string_representation =
+    lookahead
+    |> list.reverse()
+    |> string.join("")
+  let string_with_dot_representation = case has_dot {
+    True -> string_representation
+    False -> string_representation <> ".0"
+  }
+  string_with_dot_representation
+  |> float.parse()
+  |> result.map(pair.new(_, string_representation))
+  |> result.replace_error(token.ParseError)
+  |> pair.new(input)
+}
+
+fn number_break(char: String) -> Bool {
+  !is_number(char) && char != "."
+}
+
+fn is_number(to_check) {
+  "0" == to_check
+  || "1" == to_check
+  || "2" == to_check
+  || "3" == to_check
+  || "4" == to_check
+  || "5" == to_check
+  || "6" == to_check
+  || "7" == to_check
+  || "8" == to_check
+  || "9" == to_check
 }
 
 fn continue(source: Source) -> Match {
