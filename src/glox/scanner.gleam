@@ -19,11 +19,11 @@ type Match {
 }
 
 type Matcher {
-  Mather(match: fn(Source) -> #(Result(Token, TokenError), Source))
+  Matcher(match: fn(Source) -> #(Result(Token, TokenError), Source))
 }
 
 pub fn scan_tokens(source: String) -> Result(List(Token), List(TokenError)) {
-  let matcher = Mather(match())
+  let matcher = Matcher(match())
   do_scan_tokens(Source(source, 1), matcher, [])
   |> scan_collect_result
 }
@@ -87,7 +87,6 @@ fn match() -> fn(Source) -> #(Result(Token, TokenError), Source) {
     ))
     use source <- match_guard(test_match: match_number_literal(source))
     use source <- match_guard(test_match: match_identifiers(source))
-    // use <- match_guard(test_match: match_reserved_word(source))
     case string.pop_grapheme(source.input) {
       Ok(#(char, rest)) -> #(
         Error(TokenError(token.UnsupportedCharacter(char), source.line)),
@@ -217,6 +216,12 @@ fn match_number_literal(source: Source) -> Match {
   |> result.unwrap(MatchError(TokenError(EmptyString, source.line), source))
 }
 
+fn consume_number(
+  input: String,
+) -> #(Result(#(Float, String), token.ErrorType), String) {
+  pop_until(input, number_break, parse_float)
+}
+
 fn pop_until(
   input: String,
   break: fn(String) -> Bool,
@@ -233,11 +238,11 @@ fn do_pop_until(
 ) -> #(Result(#(b, String), token.ErrorType), String) {
   case string.pop_grapheme(input) {
     Ok(#(char, rest)) -> {
-      // base case
-      use <- bool.lazy_guard(break(char), fn() {
-        consume_base_case(lookahead, input, parse)
-      })
-      do_pop_until(rest, [char, ..lookahead], break, parse)
+      case break(char) {
+        // base case
+        True -> consume_base_case(lookahead, input, parse)
+        False -> do_pop_until(rest, [char, ..lookahead], break, parse)
+      }
     }
     Error(_) -> consume_base_case(lookahead, input, parse)
   }
@@ -257,12 +262,6 @@ fn consume_base_case(
   |> result.map(pair.new(_, string_representation))
   |> result.replace_error(token.ParseError)
   |> pair.new(input)
-}
-
-fn consume_number(
-  input: String,
-) -> #(Result(#(Float, String), token.ErrorType), String) {
-  pop_until(input, number_break, parse_float)
 }
 
 fn number_break(char: String) -> Bool {
